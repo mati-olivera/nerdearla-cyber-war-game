@@ -1,5 +1,7 @@
 # Nerdearla Cyber War Game
 
+![Nerdearla](./docs/banner.png)
+
 # Laboratorio
 El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina de defensa y la maquina victima. En este repo vas a encontrar como levantar toda la infra poder recrear ese mismo labortorio.
 
