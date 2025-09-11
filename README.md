@@ -7,6 +7,7 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
 
 ## Requisitos
 
+https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
 
 ## Maquina Atacante (Caldera)
