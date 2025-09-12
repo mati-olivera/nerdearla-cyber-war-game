@@ -18,37 +18,86 @@ Mas info de Caldera: https://caldera.mitre.org/
 
 ### Instalacion
 
-Crea un archivo `docker-compose.yaml` y pega esto:
-
-CAMBIAR ESTO A INSTALACION COMPILANDO IMAGEN
+Antes de instalar caldera vamos a crear un archivo de configuracion por defecto, llamado `conf.yml`
 
 ```yaml
-services:
-  caldera:
-    image: mitre/caldera:latest
-    container_name: caldera
-    ports:
-      - "8888:8888"
-    volumes:
-        - ./conf:/caldera/conf
-        - ./caldera-data:/usr/src/app/data
-    restart: unless-stopped
+ability_refresh: 60  # Interval at which ability YAML files will refresh from disk 
+api_key_blue: BLUEADMIN123  # API key which grants access to Caldera blue
+api_key_red: ADMIN123  # API key which grants access to Caldera red
+app.contact.dns.domain: mycaldera.caldera  # Domain for the DNS contact server
+app.contact.dns.socket: 0.0.0.0:53  # Listen host and port for the DNS contact server
+app.contact.gist: API_KEY  # API key for the GIST contact
+app.contact.html: /weather  # Endpoint to use for the HTML contact
+app.contact.http: http://0.0.0.0:8888  # Server to connect to for the HTTP contact
+app.contact.tcp: 0.0.0.0:7010  # Listen host and port for the TCP contact server
+app.contact.udp: 0.0.0.0:7011  # Listen host and port for the UDP contact server
+app.contact.websocket: 0.0.0.0:7012  # Listen host and port for the Websocket contact server
+app.frontend.api_base_url: http://localhost:8888
+objects.planners.default: atomic  # Specify which planner should be used by default (works for all objects, just replace `planners` with the appropriate object type name)
+crypt_salt: REPLACE_WITH_RANDOM_VALUE  # Salt for file encryption
+encryption_key: ADMIN123  # Encryption key for file encryption
+exfil_dir: /tmp  # The directory where files exfiltrated through the /file/upload endpoint will be stored
+host: 0.0.0.0  # Host the server will listen on 
+plugins:  # List of plugins to enable
+- access
+- atomic
+- compass
+- debrief
+- fieldmanual
+- gameboard
+- manx
+- response
+- sandcat
+- stockpile
+- training
+- emu
+port: 8888  # Port the server will listen on
+reports_dir: /tmp  # The directory where reports are saved on server shutdown
+auth.login.handler.module: default  # Python import path for auth service login handler ("default" will use the default handler)
+requirements:  # Caldera requirements
+  go:
+    command: go version
+    type: installed_program
+    version: 1.11
+  python:
+    attr: version
+    module: sys
+    type: python_module
+    version: 3.8.0
+users:  # User list for Caldera blue and Caldera red
+  blue:
+    blue: admin  # Username and password
+  red:
+    admin: admin
+    red: admin
 ```
 
-Luego ejecuta el siguiente comando:
-```
-docker compose up -d
-```
+Luego seguimos los siguientes pasos:
 
+```bash
+# copiamos el repo de caldera
+git clone https://github.com/mitre/caldera.git --recursive
+
+# compilamos la imagen
+docker build --build-arg VARIANT=full -t caldera ./caldera
+
+# ejecutamos el contenedor
+sudo docker run --name caldera -d -p 8888:8888 -v ./caldera-data:/usr/src/app/data -v ./conf.yml:/usr/src/app/conf/local.yml caldera
+```
 Una vez corriendo el contenedor ya deberias poder ingresar a la IP de tu maquina virtual en el puerto `8888` y ya te deberia aparacer la pantalla de login.
 
-Las credenciales para ingresar las vas a poder ver en el archivo quese creo dentro de la carpeta llamada `conf/conf.local`:
+Luego las credenciales deberian ser las siguientes:
+
 ```yaml
-users:  # User list for Caldera blue and Caldera red
-  red:
-    red: admin
-    password: password_ultra_secreta
+User: red
+Password: admin
 ```
+Si estas credenciales no te funcionan podes ver las que se crearon en el archivo de configuracion ejecutando el siguiente comando:
+
+```bash
+docker exec caldera cat "/usr/src/app/conf/local.yml"
+```
+
 ### Instalacion del agente
 TODO:
 
