@@ -20,6 +20,8 @@ Mas info de Caldera: https://caldera.mitre.org/
 
 Crea un archivo `docker-compose.yaml` y pega esto:
 
+CAMBIAR ESTO A INSTALACION COMPILANDO IMAGEN
+
 ```yaml
 services:
   caldera:
