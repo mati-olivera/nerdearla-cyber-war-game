@@ -7,7 +7,51 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
 
 ## Requisitos
 
-https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+Lo primero que necesitamos son 3 maquinas virtuales (puede ser usando virtual box, vmware o cualquier entorno cloud):
+- **Atacante**: 
+  - SO: ubuntu server 22.04
+  - CPUs: 2
+  - RAM: 8gb
+  - Disco: 30gb
+
+- **Denfensa**: 
+  - SO: ubuntu server 22.04
+  - CPUs: 2
+  - RAM: 8gb
+  - Disco: 50gb
+
+- **Victima**: 
+  - SO: Windows
+  - CPUs: 2
+  - RAM: 4gb
+  - Disco: 60gb
+
+### Docker
+
+Tanto en la maquina atacante como en la de defensa necesitaremos docker para instalar nuestras herramientas, para ello segui los siguientes pasos que se encuentran en la docu de docker: https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+
+
+1 - Instala los repositorios de apt
+```bash
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+```
+2 - Instala los paquetes de docker
+```bash
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
 
 
 ## Maquina Atacante (Caldera)
