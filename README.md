@@ -5,6 +5,9 @@
 # Laboratorio
 El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina de defensa y la maquina victima. En este repo vas a encontrar como levantar toda la infra poder recrear ese mismo labortorio.
 
+<img width="746" height="369" alt="image" src="https://github.com/user-attachments/assets/d4b4cb4d-e003-430d-920a-d56b03011096" />
+
+
 - [Requisitos](#requisitos)
   - [Docker](#docker)
 - [Máquina atacante (caldera)](#maquina-atacante-caldera)
