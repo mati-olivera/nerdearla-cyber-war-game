@@ -5,6 +5,15 @@
 # Laboratorio
 El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina de defensa y la maquina victima. En este repo vas a encontrar como levantar toda la infra poder recrear ese mismo labortorio.
 
+- [Requisitos](#requisitos)
+  - [Docker](#docker)
+- [Máquina atacante (caldera)](#maquina-atacante-caldera)
+  - [Instalación](#instalación)
+  - [Instalación del agente](#instalación-del-agente)
+- [Máquina de defensa (wazuh)](#máquina-de-defensa-wazuh)
+  - [Instalación](#instalación-1)
+  - [Instalación del agente](#instalación-del-agente-1)
+
 ## Requisitos
 
 Lo primero que necesitamos son 3 maquinas virtuales (puede ser usando virtual box, vmware o cualquier entorno cloud):
@@ -62,62 +71,6 @@ Mas info de Caldera: https://caldera.mitre.org/
 
 ### Instalacion
 
-Antes de instalar caldera vamos a crear un archivo de configuracion por defecto, llamado `conf.yml`
-
-```yaml
-ability_refresh: 60  # Interval at which ability YAML files will refresh from disk 
-api_key_blue: BLUEADMIN123  # API key which grants access to Caldera blue
-api_key_red: ADMIN123  # API key which grants access to Caldera red
-app.contact.dns.domain: mycaldera.caldera  # Domain for the DNS contact server
-app.contact.dns.socket: 0.0.0.0:53  # Listen host and port for the DNS contact server
-app.contact.gist: API_KEY  # API key for the GIST contact
-app.contact.html: /weather  # Endpoint to use for the HTML contact
-app.contact.http: http://0.0.0.0:8888  # Server to connect to for the HTTP contact
-app.contact.tcp: 0.0.0.0:7010  # Listen host and port for the TCP contact server
-app.contact.udp: 0.0.0.0:7011  # Listen host and port for the UDP contact server
-app.contact.websocket: 0.0.0.0:7012  # Listen host and port for the Websocket contact server
-app.frontend.api_base_url: http://localhost:8888
-objects.planners.default: atomic  # Specify which planner should be used by default (works for all objects, just replace `planners` with the appropriate object type name)
-crypt_salt: REPLACE_WITH_RANDOM_VALUE  # Salt for file encryption
-encryption_key: ADMIN123  # Encryption key for file encryption
-exfil_dir: /tmp  # The directory where files exfiltrated through the /file/upload endpoint will be stored
-host: 0.0.0.0  # Host the server will listen on 
-plugins:  # List of plugins to enable
-- access
-- atomic
-- compass
-- debrief
-- fieldmanual
-- gameboard
-- manx
-- response
-- sandcat
-- stockpile
-- training
-- emu
-port: 8888  # Port the server will listen on
-reports_dir: /tmp  # The directory where reports are saved on server shutdown
-auth.login.handler.module: default  # Python import path for auth service login handler ("default" will use the default handler)
-requirements:  # Caldera requirements
-  go:
-    command: go version
-    type: installed_program
-    version: 1.11
-  python:
-    attr: version
-    module: sys
-    type: python_module
-    version: 3.8.0
-users:  # User list for Caldera blue and Caldera red
-  blue:
-    blue: admin  # Username and password
-  red:
-    admin: admin
-    red: admin
-```
-
-Luego seguimos los siguientes pasos:
-
 ```bash
 # copiamos el repo de caldera
 git clone https://github.com/mitre/caldera.git --recursive
@@ -126,24 +79,45 @@ git clone https://github.com/mitre/caldera.git --recursive
 docker build --build-arg VARIANT=full -t caldera ./caldera
 
 # ejecutamos el contenedor
-sudo docker run --name caldera -d -p 8888:8888 -v ./caldera-data:/usr/src/app/data -v ./conf.yml:/usr/src/app/conf/local.yml caldera
+sudo docker run --name caldera -d -p 8888:8888 -v ./caldera-data:/usr/src/app/data caldera --insecure
 ```
 Una vez corriendo el contenedor ya deberias poder ingresar a la IP de tu maquina virtual en el puerto `8888` y ya te deberia aparacer la pantalla de login.
 
 Luego las credenciales deberian ser las siguientes:
 
 ```yaml
-User: red
+User: admin
 Password: admin
 ```
-Si estas credenciales no te funcionan podes ver las que se crearon en el archivo de configuracion ejecutando el siguiente comando:
+
+Si se ejecuta el contenedor sin el flag --insecure, esto generara credeciales por defecto que pueden verse con este comando una vez levantado el contenedor:
 
 ```bash
 docker exec caldera cat "/usr/src/app/conf/local.yml"
 ```
 
 ### Instalacion del agente
-TODO:
+
+Para instalar el agente de Caldera en la maquina victima primero debemos ir a la parte de **agents** y seleccionar **Deploy an Agent**
+
+Luego seelccionaremos el agente **Sandcat**, que es el agente por defecto de Caldera
+
+![Caldera](./docs/caldera-agent.jpeg)
+
+#### IMPORTANTE
+Una vez hecho esto, antes de copiar el codigo script de powershell es importante que reemplazemos la IP del servidor `0.0.0.0` por la IP de nuestra maquina de ataque.
+Esto se puede hacer en el parametro `app.contact.http` y cambiamos `http://0.0.0.0:8888` por `http://<IP_ATAQUE>:8888` 
+
+![Caldera](./docs/caldera-agent-psh.jpeg)
+
+Luego en la maquina victima, abrimos una terminal de powershell y pegamos el script:
+
+![Caldera](./docs/caldera-agent-install.jpeg)
+
+Si todo salio bien, ya deberiamos ver nuestro agente corriendo en el dashboard de Caldera
+
+![Caldera](./docs/caldera-agent-installed.jpeg)
+
 
 ## Maquina de Defensa (Wazuh)
 Para la parte de defensa utilizaremos una herramienta llamada **Wazuh**. Wazuh es un SIEM con capacidades de EDR, es decir que ademas de detectar y prevenir (IDS/IPS) comportamientos anomalos y maliciosos.
