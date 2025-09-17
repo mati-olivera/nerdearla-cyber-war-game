@@ -9,10 +9,10 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
   - [Docker](#docker)
 - [Máquina atacante (caldera)](#maquina-atacante-caldera)
   - [Instalación](#instalación)
-  - [Instalación del agente](#instalación-del-agente)
-- [Máquina de defensa (wazuh)](#máquina-de-defensa-wazuh)
-  - [Instalación](#instalación-1)
-  - [Instalación del agente](#instalación-del-agente-1)
+  - [Instalación del agente](#instalacion-del-agente)
+- [Máquina de defensa (wazuh)](#maquina-de-defensa-wazuh)
+  - [Instalación](#instalacion-1)
+  - [Instalación del agente](#instalacion-del-agente-1)
 
 ## Requisitos
 
