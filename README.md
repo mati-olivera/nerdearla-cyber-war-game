@@ -2,6 +2,16 @@
 
 ![Nerdearla](./docs/banner.png)
 
+# El Workshop
+
+En este workshop mostramos como trabaja un **Purple Team** de manera colaborativa entre ataque y defensa, que herramientas utilizamos y como mediante un War Game podemos anticipar amenazas de manera temprana teniendo una mirada general de todo el proceso desde ambas partes del equipo.
+
+## El team:
+ - [Ezequiel Arévalo](https://www.linkedin.com/in/martin-e-arevalo/) - :japanese_goblin: Senior Advanced Offensive Security Engineer 
+ - [Mariano Molina](https://www.linkedin.com/in/mariano-molina-rosso-614142150/) - :cop: Security Operation Center Specialist
+ - [Lucas Accastello](https://www.linkedin.com/in/lucas-accastello/) - :computer: Software Engineer Sr
+ - [Matias Olivera](https://www.linkedin.com/in/matias-olivera/) - :bug: Cybersecurity Analyst SR
+
 # Laboratorio
 El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina de defensa y la maquina victima. En este repo vas a encontrar como levantar toda la infra poder recrear ese mismo labortorio.
 
