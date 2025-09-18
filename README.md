@@ -13,6 +13,14 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
 - [Máquina de defensa (wazuh)](#maquina-de-defensa-wazuh)
   - [Instalación](#instalacion-1)
   - [Instalación del agente](#instalacion-del-agente-1)
+  - [Configuracion de Wazuh para respuesta a incidentes](#configuracion-de-wazuh-para-respuesta-a-incidentes)
+    - [Script de aislamiento de windows](#1---script-de-aislamiento-de-windows)
+    - [Desplegar script de aislamiento](#2---desplegar-script-de-aislamiento)
+    - [Configurar servidor de Wazuh](#3---configurar-servidor-de-wazuh)
+    - [Verificacion](#4---verificacion)
+  - [Reglas de deteccion temprana](#reglas-de-deteccion-temprana)
+    - [Detectar uso sospechoso de PowerShell](#regla-1-detectar-uso-sospechoso-de-powershell-descarga-de-archivos)
+    - [Detectar Uso de PsExec](#regla-2-detectar-el-uso-de-psexec)
 
 ## Requisitos
 
@@ -157,3 +165,152 @@ Si no modificaste las credenciales por defecto especificadas en el docker-compos
 
 - Username: `admin`
 - Password: `SecretPassword`
+
+## Configuracion de Wazuh para respuesta a incidentes
+
+### 1 - Script de aislamiento de windows
+Lo primero que necesitamos es crear en la maquina victima el archivo `isolate-host.bat`. Esto hara que la maquina se aisle cuando wazuh detecte una amenaza critica paar que esta no se propague.
+
+Este archivo lo podes encontrar en [`wazuh/isolate-hoste.bat`](./wazuh/isolate-host.bat)
+
+#### IMPORTANTE
+Reemplaza la linea 7 por la IP de tu servidor, por ejemplo:
+```powershell
+set WAZUH_MANAGER="192.168.1.81"
+```
+
+### 2 - Desplegar script de aislamiento
+
+Una vez creado el script, este debe moverse a la siguiente ruta:
+
+`C:\Program Files (x86)\ossec-agent\active-response\bin\isolate-host.bat`
+
+### 3 - Configurar servidor de Wazuh
+
+> Los siguientes comandos deben hacerse dentro de los contenedores de wazuh, como estas imagenes no traen nano ni vim, lo que podes hacer es copiarte el archivo fuera del contenedor, editarlos y luego volver a pegarlos utilizando docker cp:
+`docker cp single-node-wazuh.manager-1:/var/ossec/etc/ossec.conf .`
+
+Lo primero es agregar el siguiente bloque al archivo 
+`/var/ossec/etc/ossec.conf`:
+
+```xml
+<command>
+  <name>windows-isolate</name>
+  <executable>isolate-host.bat</executable>
+  <timeout_allowed>yes</timeout_allowed>
+</command>
+```
+
+Luego modificar el bloque `<active-response>`, es probable que este comentado, si es asi descomentarlo y agregar lo siguiente: 
+
+```xml
+<active-response>
+  <command>windows-isolate</command>
+  <location>local</location>
+  <rules_group>windows</rules_group>
+  <level>12</level>
+  <timeout>120</timeout>
+</active-response>
+```
+
+Que es lo que hace todo esto?
+- `<command>windows-isolate</command>`: Llama al comando que definimos arriba.
+- `<location>local</location>`: El script se ejecutará en el agente que generó la alerta.
+- `<rules_group>windows</rules_group>`: Muy importante. Esto asegura que esta acción solo se ejecute en agentes de Windows.
+- `<level>12</level>`: El disparador. Solo las alertas con un nivel de severidad de 12 o más activarán el aislamiento. Este es el umbral para una "detección high".
+- `<timeout>600</timeout>`: Duración del aislamiento en segundos. Después de 600 segundos (10 minutos), Wazuh enviará automáticamente el comando delete al script para quitar el bloqueo.
+
+Lo siguiente es reiniciar el servidor de Wazuh para que esta configuracion tome efecto:
+
+`docker restart single-node-wazuh.manager-1`
+
+Si no utilizaste docker:
+
+`systemctl restart wazuh-manager`
+
+### 4 - Verificacion
+
+¡Es hora de probar si funciona! La mejor manera es generar una alerta de alto nivel en un agente de Windows que tenga el script.
+- En el agente de Windows, puedes intentar generar múltiples fallos de inicio de sesión (RDP o local). Esto suele disparar la regla 60204, que tiene un nivel 12.
+- Observa el resultado:
+  - En el panel de Wazuh: Deberías ver la alerta de nivel 12 y, poco después, un evento indicando que la respuesta activa **windows-isolate** se ha ejecutado.
+  - En la máquina Windows:
+    - Abre "Firewall de Windows con seguridad avanzada". En "Reglas de salida", deberías ver las dos nuevas reglas: **Wazuh-Isolation-Block-All** y **Wazuh-Isolation-Allow-Manager**.
+    - Intenta hacer ping a una IP externa (ej. ping 8.8.8.8) desde una terminal (CMD o PowerShell). Debería fallar.
+    - Intenta hacer ping a tu servidor Wazuh. Debería funcionar.
+- Espera el timeout: Transcurridos los 10 minutos (600 segundos) que configuraste, las reglas del firewall deberían desaparecer automáticamente y la conectividad normal debería restablecerse.
+
+## Reglas de deteccion Temprana
+
+### Estructura Básica para Crear una Regla
+Antes de empezar, recuerda la estructura básica:
+ - **El Evento**: Ocurre una acción en un agente de Windows (ej: un inicio de sesión fallido) y se registra en el Visor de Eventos de Windows.
+  - **El Decodificador**: Wazuh analiza el log del evento y lo "decodifica", extrayendo campos clave como user.name, win.eventdata.targetUserName, etc. Para los eventos de Windows, Wazuh ya tiene miles de decodificadores listos.
+- **La Regla**: La regla utiliza los campos decodificados para buscar patrones específicos. Si hay una coincidencia, se genera una alerta.
+
+> Añadirás tus nuevas reglas dentro de la etiqueta <group> en el archivo **local_rules.xml**.
+Este archivo se encuentra en la ruta `var/ossec/etc/rules/local_rules.xml` 
+
+```xml
+<group name="windows,custom_rules">
+
+</group>
+```
+Después de añadir cualquier regla, siempre reinicia el manager de Wazuh para aplicar los cambios: `docker restart single-node-wazuh.manager-1` 
+
+
+### Regla 1: Detectar Uso Sospechoso de PowerShell (Descarga de Archivos)
+
+PowerShell es una herramienta poderosa, pero los atacantes la usan frecuentemente para descargar malware sin dejar rastro en el disco (ataques "fileless"). Esta regla busca comandos de PowerShell que contengan patrones de descarga.
+
+#### Paso 1: Habilitar el Log de Bloques de Scripts de PowerShell en los Agentes Windows 
+Wazuh no puede detectar algo que no se registra. Debes habilitar este logging avanzado en tus máquinas Windows a través de una GPO (Política de Grupo).
+- Abre el Editor de Políticas de Grupo (**gpedit.msc**).
+- Navega a: `Configuración del Equipo -> Plantillas Administrativas -> Componentes de Windows -> Windows PowerShell`.
+- Habilita la política "Activar registro de bloques de scripts de PowerShell".
+
+#### Paso 2: Crear la regla en Wazuh
+
+Ahora, añade la siguiente regla al archivo local_rules.xml.
+
+```xml
+<rule id="100003" level="10">
+    <if_sid>61603</if_sid>
+
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)DownloadString|DownloadFile|Invoke-WebRequest|IWR|Net.WebClient</field>
+    <description>Detectado posible uso malicioso de PowerShell para descarga de archivos.</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+</rule>
+```
+Explicación:
+- **if_sid**: Se basa en la regla 61603 de Wazuh, que se activa con eventos de ejecución de bloques de script de PowerShell (ID de Evento de Windows 4104).
+- **field name="win.eventdata.scriptBlockText"**: Este es el campo que contiene el código PowerShell ejecutado.
+- **(?i)DownloadString...**: Busca (ignorando mayúsculas/minúsculas) varias palabras clave y cmdlets comúnmente usados para descargar contenido desde internet (DownloadString, IWR, etc.).
+
+### Regla 2: Detectar el Uso de PsExec
+
+PsExec es una herramienta legítima de Sysinternals, pero es una de las favoritas de los atacantes para moverse lateralmente por la red y ejecutar comandos de forma remota. Detectar su uso puede ser un indicador temprano de un compromiso.
+
+Cuando PsExec se ejecuta contra una máquina remota, crea un servicio temporal en esa máquina llamado **PSEXESVC**. Nuestra regla buscará la creación de este servicio.
+
+#### Paso 1: Crear la regla en Wazuh
+
+Esta detección se basa en el ID de Evento de Windows 7045, que corresponde a "Se instaló un servicio en el sistema".
+
+```xml
+<rule id="100004" level="9">
+    <if_sid>60109</if_sid>
+    <field name="win.eventdata.serviceName">PSEXESVC</field>
+    <description>Detectado el uso de PsExec en el host $(win.system.computer). Posible movimiento lateral.</description>
+    <mitre>
+      <id>T1569.002</id>
+    </mitre>
+</rule>
+```
+
+Explicación:
+- **if_sid**: Se basa en la regla 60109 de Wazuh, que ya detecta la creación de un nuevo servicio.
+- **field name="win.eventdata.serviceName"**: Filtramos por el campo que contiene el nombre del servicio.
+- **PSEXESVC**: Buscamos la cadena exacta del nombre del servicio que crea PsExec.
