@@ -34,6 +34,7 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
   - [Reglas de deteccion temprana](#reglas-de-deteccion-temprana)
     - [Detectar uso sospechoso de PowerShell](#regla-1-detectar-uso-sospechoso-de-powershell-descarga-de-archivos)
     - [Detectar Uso de PsExec](#regla-2-detectar-el-uso-de-psexec)
+- [Maquina Victima (windows)](#maquina-victima-windows)
 
 ## Requisitos
 
