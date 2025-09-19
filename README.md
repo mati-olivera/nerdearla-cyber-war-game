@@ -179,6 +179,18 @@ Si no modificaste las credenciales por defecto especificadas en el docker-compos
 - Username: `admin`
 - Password: `SecretPassword`
 
+## Instalacion del agente
+
+Para instalar el agente de Wazuh simplemente debemos dirigirnos a **Agents Management** y clickear donde dice **Deploy new agent**.
+Luego nos aparecera la siguiente ventana y seguimos los pasos:
+
+### Importante
+Recorda poner la ip de wazuh en la opcion de **"Assign a server address"**
+
+![Wazuh agent](./docs/wazuh-agent.png)
+
+Para mas info sobre la instalacion del agente podes ver la [documentacion oficial de Wazuh](https://documentation.wazuh.com/current/installation-guide/wazuh-agent/index.html)
+
 ## Configuracion de Wazuh para respuesta a incidentes
 
 ### 1 - Script de aislamiento de windows
@@ -329,3 +341,39 @@ Explicación:
 - **if_sid**: Se basa en la regla 60109 de Wazuh, que ya detecta la creación de un nuevo servicio.
 - **field name="win.eventdata.serviceName"**: Filtramos por el campo que contiene el nombre del servicio.
 - **PSEXESVC**: Buscamos la cadena exacta del nombre del servicio que crea PsExec.
+
+## Maquina victima (Windows)
+
+Para que Wazuh detecte todos los eventos que necesitamos en la maquina victima, necesitamos hacer un par de modificaciones
+
+### Sysmon
+
+Lo primero que necesitamos es instalar Sysmon, esto nos permitira acceder a eventos de sistema y nos dara una mayor visibilidad en Wazuh.
+
+Esto lo podemos descargar desde el sitio oficial de Microsoft:
+https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon
+
+Y para instalarlo ejecutamos el comando:
+```
+sysmon -accepteula -i
+```
+
+Una vez hecho esto, agregamos el siguiente bloque al archivo `C:\Program Files (x86)\ossec-agent\ossec.conf`.
+Esto hara que windows nos envie todos los eventos de sysmon a Wazuh.
+
+```xml
+<localfile>
+  <location>Microsoft-Windows-Sysmon/Operational</location>
+  <log_format>eventchannel</log_format>
+</localfile>
+```
+
+Por ultimo, abrimos powershell y ejecutomas estos dos comandos:
+
+```
+auditpol /set /subcategory:"Process Creation" /success:enable /failure:enable
+```
+
+```
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit" /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
+```
