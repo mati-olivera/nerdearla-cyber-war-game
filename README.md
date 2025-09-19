@@ -182,9 +182,9 @@ Si no modificaste las credenciales por defecto especificadas en el docker-compos
 ## Configuracion de Wazuh para respuesta a incidentes
 
 ### 1 - Script de aislamiento de windows
-Lo primero que necesitamos es crear en la maquina victima el archivo `isolate-host.bat`. Esto hara que la maquina se aisle cuando wazuh detecte una amenaza critica paar que esta no se propague.
+Lo primero que necesitamos es crear en la maquina victima los archivos `quarantine-host.ps1` y `quarantine-host.cmd`. Esto hara que la maquina se aisle cuando wazuh detecte una amenaza critica paar que esta no se propague.
 
-Este archivo lo podes encontrar en [`wazuh/isolate-hoste.bat`](./wazuh/isolate-host.bat)
+Estos archivos los podes encontrar en [`wazuh/active-response`](./wazuh/active-response)
 
 #### IMPORTANTE
 Reemplaza la linea 7 por la IP de tu servidor, por ejemplo:
@@ -194,9 +194,11 @@ set WAZUH_MANAGER="192.168.1.81"
 
 ### 2 - Desplegar script de aislamiento
 
-Una vez creado el script, este debe moverse a la siguiente ruta:
+Una vez creado ambos scripts, estos deben moverse a la siguiente ruta:
 
-`C:\Program Files (x86)\ossec-agent\active-response\bin\isolate-host.bat`
+`C:\Program Files (x86)\ossec-agent\active-response\bin\quarantine-host.cmd`
+y
+`C:\Program Files (x86)\ossec-agent\active-response\bin\quarantine-host.ps1`
 
 ### 3 - Configurar servidor de Wazuh
 
@@ -209,7 +211,7 @@ Lo primero es agregar el siguiente bloque al archivo
 ```xml
 <command>
   <name>windows-isolate</name>
-  <executable>isolate-host.bat</executable>
+  <executable>quarantine-host.cmd</executable>
   <timeout_allowed>yes</timeout_allowed>
 </command>
 ```
@@ -218,19 +220,19 @@ Luego modificar el bloque `<active-response>`, es probable que este comentado, s
 
 ```xml
 <active-response>
+  <disabled>no</disabled>
   <command>windows-isolate</command>
   <location>local</location>
-  <rules_group>windows</rules_group>
-  <level>12</level>
-  <timeout>120</timeout>
+  <level>10</level>
+  <timeout>60</timeout>
 </active-response>
 ```
 
 Que es lo que hace todo esto?
+- `<disabled>no</disabled>`: Activa el active response de Wazuh
 - `<command>windows-isolate</command>`: Llama al comando que definimos arriba.
 - `<location>local</location>`: El script se ejecutará en el agente que generó la alerta.
-- `<rules_group>windows</rules_group>`: Muy importante. Esto asegura que esta acción solo se ejecute en agentes de Windows.
-- `<level>12</level>`: El disparador. Solo las alertas con un nivel de severidad de 12 o más activarán el aislamiento. Este es el umbral para una "detección high".
+- `<level>10</level>`: El disparador. Solo las alertas con un nivel de severidad de 12 o más activarán el aislamiento. Este es el umbral para una "detección high".
 - `<timeout>600</timeout>`: Duración del aislamiento en segundos. Después de 600 segundos (10 minutos), Wazuh enviará automáticamente el comando delete al script para quitar el bloqueo.
 
 Lo siguiente es reiniciar el servidor de Wazuh para que esta configuracion tome efecto:
