@@ -35,6 +35,7 @@ El laboratorio del workshop consta de 3 partes, la maquina atacante, la maquina 
     - [Detectar uso sospechoso de PowerShell](#regla-1-detectar-uso-sospechoso-de-powershell-descarga-de-archivos)
     - [Detectar Uso de PsExec](#regla-2-detectar-el-uso-de-psexec)
 - [Maquina Victima (windows)](#maquina-victima-windows)
+- [Bonus Track](#bonus-track)
 
 ## Requisitos
 
@@ -378,3 +379,35 @@ auditpol /set /subcategory:"Process Creation" /success:enable /failure:enable
 ```
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit" /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
 ```
+
+## Bonus Track
+
+Para crear tu perfil o adversario en caldera generado con IA podes ubicar el archivo .yaml en la siguiente ruta:
+
+```
+caldera/data/adversaries/
+```
+o bien en la carpeta del plugin correspondiente: 
+```
+plugins/stockpile/data/adversaries/
+```
+Una vez hecho esto recorda verificar el formato del .yaml
+Ejemplo mínimo de adversary profile:
+
+```yaml
+id: adversary-1234
+name: Full Kill Chain Demo
+description: Escenario de simulación básico
+atomic_ordering:
+  - ability_id_1
+  - ability_id_2
+```
+Luego solo resta reiniciar el servidor de caldera:
+
+```
+docker restart caldera
+```
+Y listo! deberias tener tu propio adversario listo para ejecutar
+
+
+## Purple Team [NaranjaX](https://naranjax.com) :purple_heart: :purple_heart: :purple_heart:
