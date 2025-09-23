@@ -1,0 +1,1234 @@
+---
+# CALDERA BAS - POST-BREACH KILL CHAIN SIMULATION
+# Advanced Post-Compromise Adversary Emulation
+# MITRE ATT&CK Framework v14 Mapping
+# Scenario: Initial access already established
+
+# ADVERSARY PROFILE
+- id: post-breach-apt
+  name: "Post-Breach APT Simulator"
+  description: "Advanced post-compromise kill chain: reconnaissance → privilege escalation → lateral movement → exfiltration"
+  atomic_ordering:
+    - "pb.001.network_discovery"
+    - "pb.002.file_discovery"
+    - "pb.003.process_discovery"
+    - "pb.004.account_discovery_local"
+    - "pb.005.account_discovery_domain"
+    - "pb.006.group_discovery"
+    - "pb.007.system_info"
+    - "pb.008.lsass_dump"
+    - "pb.009.sam_dump"
+    - "pb.010.browser_creds"
+    - "pb.011.credential_files"
+    - "pb.012.privilege_escalation"
+    - "pb.013.token_manipulation"
+    - "pb.014.rdp_lateral"
+    - "pb.015.smb_lateral"
+    - "pb.016.pass_the_hash"
+    - "pb.017.wmi_execution"
+    - "pb.018.local_data_collection"
+    - "pb.019.network_data_collection"
+    - "pb.020.c2_exfiltration"
+    - "pb.021.alternative_exfiltration"
+
+# ABILITIES COLLECTION
+
+# ========================
+# PHASE 1: RECONNAISSANCE
+# ========================
+
+- id: pb.001.network_discovery
+  name: "Internal Network Discovery"
+  description: "T1018 - Discover remote systems on internal network"
+  tactic: discovery
+  technique:
+    attack_id: T1018
+    name: "Remote System Discovery"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 1: Network Discovery
+          Write-Host "[POST-BREACH] Initiating internal network reconnaissance..." -ForegroundColor Red
+          Write-Host "[MITRE] T1018 - Remote System Discovery" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          New-Item -ItemType Directory -Path $reconDir -Force | Out-Null
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          # Network discovery simulation
+          Write-Host "[RECON] Discovering network topology..." -ForegroundColor Red
+          "[$timestamp] NETWORK: Starting network discovery" | Out-File "$reconDir\network_recon.log"
+          
+          # Ping sweep simulation
+          $subnet = "192.168.1"
+          Write-Host "[RECON] Performing ping sweep on $subnet.0/24..." -ForegroundColor Red
+          
+          # Simulate discovered hosts
+          $discoveredHosts = @(
+              "192.168.1.10 - DC01.company.local - Domain Controller",
+              "192.168.1.20 - FS01.company.local - File Server", 
+              "192.168.1.30 - SQL01.company.local - Database Server",
+              "192.168.1.40 - WS01.company.local - Workstation",
+              "192.168.1.50 - WS02.company.local - Workstation"
+          )
+          
+          foreach ($host in $discoveredHosts) {
+              "[$timestamp] DISCOVERED: $host" | Out-File "$reconDir\network_recon.log" -Append
+              Start-Sleep 1
+          }
+          
+          Write-Host "[SUCCESS] Network discovery completed - $($discoveredHosts.Count) hosts found" -ForegroundColor Green
+        cleanup: |
+          Remove-Item "C:\temp\post_breach_sim\network_recon.log" -ErrorAction SilentlyContinue
+
+- id: pb.002.file_discovery
+  name: "File and Directory Discovery"
+  description: "T1083 - Enumerate interesting files and directories"
+  tactic: discovery
+  technique:
+    attack_id: T1083
+    name: "File and Directory Discovery"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 1b: File System Discovery
+          Write-Host "[POST-BREACH] Enumerating file system for sensitive data..." -ForegroundColor Red
+          Write-Host "[MITRE] T1083 - File and Directory Discovery" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          # Search for interesting files
+          Write-Host "[RECON] Searching for sensitive files..." -ForegroundColor Red
+          "[$timestamp] FILES: Starting file discovery" | Out-File "$reconDir\file_discovery.log"
+          
+          # Common sensitive file patterns
+          $sensitivePatterns = @(
+              "*.txt", "*.doc", "*.docx", "*.pdf", "*.xls", "*.xlsx",
+              "*password*", "*credential*", "*config*", "*backup*"
+          )
+          
+          $interestingDirs = @(
+              "$env:USERPROFILE\Documents",
+              "$env:USERPROFILE\Desktop", 
+              "C:\Users\Administrator\Documents",
+              "C:\inetpub\wwwroot",
+              "C:\Program Files\*\config"
+          )
+          
+          foreach ($dir in $interestingDirs) {
+              if (Test-Path $dir) {
+                  "[$timestamp] DIRECTORY: $dir (accessible)" | Out-File "$reconDir\file_discovery.log" -Append
+                  
+                  # Simulate file enumeration
+                  foreach ($pattern in $sensitivePatterns) {
+                      $files = Get-ChildItem -Path $dir -Filter $pattern -Recurse -ErrorAction SilentlyContinue | Select-Object -First 3
+                      foreach ($file in $files) {
+                          "[$timestamp] FOUND: $($file.FullName)" | Out-File "$reconDir\file_discovery.log" -Append
+                      }
+                  }
+              }
+          }
+          
+          Write-Host "[SUCCESS] File discovery completed" -ForegroundColor Green
+
+- id: pb.003.process_discovery
+  name: "Process Discovery and Analysis"
+  description: "T1057 - Enumerate running processes for privilege escalation opportunities"
+  tactic: discovery
+  technique:
+    attack_id: T1057
+    name: "Process Discovery"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 1c: Process Discovery
+          Write-Host "[POST-BREACH] Enumerating running processes..." -ForegroundColor Red
+          Write-Host "[MITRE] T1057 - Process Discovery" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[RECON] Analyzing running processes..." -ForegroundColor Red
+          "[$timestamp] PROCESSES: Starting process enumeration" | Out-File "$reconDir\process_discovery.log"
+          
+          # Get running processes with interesting details
+          $processes = Get-Process | Select-Object Name, Id, ProcessName, Path, Company | Sort-Object Name
+          
+          # Look for interesting processes
+          $interestingProcesses = @("lsass", "winlogon", "csrss", "services", "svchost", "explorer")
+          
+          foreach ($proc in $processes) {
+              if ($proc.Name -in $interestingProcesses) {
+                  "[$timestamp] INTERESTING: $($proc.Name) (PID: $($proc.Id))" | Out-File "$reconDir\process_discovery.log" -Append
+              }
+          }
+          
+          # Check for privilege escalation opportunities
+          $privilegedServices = Get-WmiObject -Class Win32_Service | Where-Object {$_.StartMode -eq "Auto" -and $_.State -eq "Running"}
+          "[$timestamp] SERVICES: Found $($privilegedServices.Count) running services" | Out-File "$reconDir\process_discovery.log" -Append
+          
+          Write-Host "[SUCCESS] Process discovery completed - $($processes.Count) processes analyzed" -ForegroundColor Green
+
+# =====================
+# PHASE 2: DISCOVERY
+# =====================
+
+- id: pb.004.account_discovery_local
+  name: "Local Account Discovery"
+  description: "T1087.001 - Enumerate local user accounts"
+  tactic: discovery
+  technique:
+    attack_id: T1087.001
+    name: "Account Discovery: Local Account"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 2: Local Account Discovery
+          Write-Host "[POST-BREACH] Enumerating local user accounts..." -ForegroundColor Red
+          Write-Host "[MITRE] T1087.001 - Account Discovery: Local Account" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[DISCOVERY] Gathering local account information..." -ForegroundColor Red
+          "[$timestamp] ACCOUNTS: Starting local account enumeration" | Out-File "$reconDir\accounts_local.log"
+          
+          # Enumerate local users
+          $localUsers = Get-LocalUser -ErrorAction SilentlyContinue
+          if ($localUsers) {
+              foreach ($user in $localUsers) {
+                  $status = if ($user.Enabled) { "ENABLED" } else { "DISABLED" }
+                  $lastLogon = if ($user.LastLogon) { $user.LastLogon.ToString() } else { "Never" }
+                  "[$timestamp] LOCAL_USER: $($user.Name) - $status - Last Logon: $lastLogon" | Out-File "$reconDir\accounts_local.log" -Append
+              }
+          }
+          
+          # Check for admin accounts
+          $adminUsers = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue
+          if ($adminUsers) {
+              "[$timestamp] ADMIN_ACCOUNTS: Found $($adminUsers.Count) administrator accounts" | Out-File "$reconDir\accounts_local.log" -Append
+              foreach ($admin in $adminUsers) {
+                  "[$timestamp] ADMIN: $($admin.Name) - $($admin.ObjectClass)" | Out-File "$reconDir\accounts_local.log" -Append
+              }
+          }
+          
+          Write-Host "[SUCCESS] Local account discovery completed" -ForegroundColor Green
+
+- id: pb.005.account_discovery_domain
+  name: "Domain Account Discovery"
+  description: "T1087.002 - Enumerate domain user accounts"
+  tactic: discovery
+  technique:
+    attack_id: T1087.002
+    name: "Account Discovery: Domain Account"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 2b: Domain Account Discovery
+          Write-Host "[POST-BREACH] Enumerating domain user accounts..." -ForegroundColor Red
+          Write-Host "[MITRE] T1087.002 - Account Discovery: Domain Account" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[DISCOVERY] Gathering domain account information..." -ForegroundColor Red
+          "[$timestamp] DOMAIN: Starting domain account enumeration" | Out-File "$reconDir\accounts_domain.log"
+          
+          # Check if domain joined
+          $computerInfo = Get-ComputerInfo -ErrorAction SilentlyContinue
+          if ($computerInfo.CsDomain -and $computerInfo.CsDomain -ne "WORKGROUP") {
+              "[$timestamp] DOMAIN: $($computerInfo.CsDomain)" | Out-File "$reconDir\accounts_domain.log" -Append
+              
+              # Simulate domain user enumeration (safe simulation)
+              $simulatedDomainUsers = @(
+                  "COMPANY\administrator - Domain Admin",
+                  "COMPANY\service_sql - Service Account", 
+                  "COMPANY\backup_admin - Backup Operator",
+                  "COMPANY\helpdesk - Help Desk User",
+                  "COMPANY\john.doe - Standard User",
+                  "COMPANY\jane.smith - Standard User"
+              )
+              
+              foreach ($domainUser in $simulatedDomainUsers) {
+                  "[$timestamp] DOMAIN_USER: $domainUser" | Out-File "$reconDir\accounts_domain.log" -Append
+              }
+              
+              Write-Host "[SUCCESS] Domain account discovery completed - $($simulatedDomainUsers.Count) accounts found" -ForegroundColor Green
+          } else {
+              "[$timestamp] DOMAIN: Not domain joined (Workgroup)" | Out-File "$reconDir\accounts_domain.log" -Append
+              Write-Host "[INFO] System is not domain joined" -ForegroundColor Yellow
+          }
+
+- id: pb.006.group_discovery
+  name: "Permission Groups Discovery"
+  description: "T1069.001 - Enumerate local security groups and memberships"
+  tactic: discovery
+  technique:
+    attack_id: T1069.001
+    name: "Permission Groups Discovery: Local Groups"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 2c: Group Discovery
+          Write-Host "[POST-BREACH] Enumerating security groups and memberships..." -ForegroundColor Red
+          Write-Host "[MITRE] T1069.001 - Permission Groups Discovery: Local Groups" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[DISCOVERY] Analyzing group memberships..." -ForegroundColor Red
+          "[$timestamp] GROUPS: Starting group enumeration" | Out-File "$reconDir\groups_discovery.log"
+          
+          # Enumerate local groups
+          $localGroups = Get-LocalGroup -ErrorAction SilentlyContinue
+          if ($localGroups) {
+              foreach ($group in $localGroups) {
+                  "[$timestamp] LOCAL_GROUP: $($group.Name) - $($group.Description)" | Out-File "$reconDir\groups_discovery.log" -Append
+                  
+                  # Get group members for privileged groups
+                  if ($group.Name -in @("Administrators", "Backup Operators", "Remote Desktop Users", "Power Users")) {
+                      $members = Get-LocalGroupMember -Group $group.Name -ErrorAction SilentlyContinue
+                      if ($members) {
+                          foreach ($member in $members) {
+                              "[$timestamp] MEMBER: $($group.Name) -> $($member.Name) ($($member.ObjectClass))" | Out-File "$reconDir\groups_discovery.log" -Append
+                          }
+                      }
+                  }
+              }
+          }
+          
+          # Check current user privileges
+          $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+          $principal = New-Object System.Security.Principal.WindowsPrincipal($currentUser)
+          $isAdmin = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+          
+          "[$timestamp] CURRENT_USER: $($currentUser.Name)" | Out-File "$reconDir\groups_discovery.log" -Append
+          "[$timestamp] IS_ADMIN: $isAdmin" | Out-File "$reconDir\groups_discovery.log" -Append
+          
+          Write-Host "[SUCCESS] Group discovery completed - Current user admin: $isAdmin" -ForegroundColor Green
+
+- id: pb.007.system_info
+  name: "System Information Discovery"
+  description: "T1082 - Gather system configuration and information"
+  tactic: discovery
+  technique:
+    attack_id: T1082
+    name: "System Information Discovery"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 2d: System Information Discovery
+          Write-Host "[POST-BREACH] Gathering system information..." -ForegroundColor Red
+          Write-Host "[MITRE] T1082 - System Information Discovery" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[DISCOVERY] Collecting system details..." -ForegroundColor Red
+          "[$timestamp] SYSINFO: Starting system information gathering" | Out-File "$reconDir\system_info.log"
+          
+          # Basic system information
+          $computerInfo = Get-ComputerInfo -ErrorAction SilentlyContinue
+          if ($computerInfo) {
+              "[$timestamp] HOSTNAME: $($computerInfo.CsName)" | Out-File "$reconDir\system_info.log" -Append
+              "[$timestamp] OS: $($computerInfo.WindowsProductName) $($computerInfo.WindowsVersion)" | Out-File "$reconDir\system_info.log" -Append
+              "[$timestamp] DOMAIN: $($computerInfo.CsDomain)" | Out-File "$reconDir\system_info.log" -Append
+              "[$timestamp] TOTAL_RAM: $([math]::Round($computerInfo.TotalPhysicalMemory/1GB, 2)) GB" | Out-File "$reconDir\system_info.log" -Append
+          }
+          
+          # Network configuration
+          $networkAdapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
+          foreach ($adapter in $networkAdapters) {
+              $ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -ErrorAction SilentlyContinue
+              foreach ($ip in $ipConfig) {
+                  if ($ip.AddressFamily -eq "IPv4" -and $ip.IPAddress -ne "127.0.0.1") {
+                      "[$timestamp] NETWORK: $($adapter.Name) - $($ip.IPAddress)/$($ip.PrefixLength)" | Out-File "$reconDir\system_info.log" -Append
+                  }
+              }
+          }
+          
+          # Installed software (sample)
+          $installedSoftware = Get-WmiObject -Class Win32_Product -ErrorAction SilentlyContinue | Select-Object -First 10
+          "[$timestamp] SOFTWARE: Installed applications discovered" | Out-File "$reconDir\system_info.log" -Append
+          
+          Write-Host "[SUCCESS] System information discovery completed" -ForegroundColor Green
+
+# ===========================
+# PHASE 3: CREDENTIAL ACCESS
+# ===========================
+
+- id: pb.008.lsass_dump
+  name: "LSASS Memory Credential Dumping"
+  description: "T1003.001 - Advanced LSASS memory dumping simulation"
+  tactic: credential-access
+  technique:
+    attack_id: T1003.001
+    name: "OS Credential Dumping: LSASS Memory"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 3: Advanced LSASS Dumping
+          Write-Host "[POST-BREACH] Attempting advanced LSASS memory dump..." -ForegroundColor Red
+          Write-Host "[MITRE] T1003.001 - OS Credential Dumping: LSASS Memory" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[CRED-ACCESS] Initiating memory credential extraction..." -ForegroundColor Red
+          "[$timestamp] LSASS: Starting advanced credential dumping" | Out-File "$reconDir\lsass_dump.log"
+          
+          # Check for LSASS process
+          $lsassProcess = Get-Process lsass -ErrorAction SilentlyContinue
+          if ($lsassProcess) {
+              "[$timestamp] LSASS: Process located (PID: $($lsassProcess.Id))" | Out-File "$reconDir\lsass_dump.log" -Append
+              
+              # Simulate multiple credential extraction methods
+              Write-Host "[SIMULATION] Method 1: Direct LSASS access..." -ForegroundColor Red
+              Start-Sleep 2
+              "[$timestamp] METHOD1: Direct LSASS memory read attempted" | Out-File "$reconDir\lsass_dump.log" -Append
+              
+              Write-Host "[SIMULATION] Method 2: ProcDump technique..." -ForegroundColor Red  
+              Start-Sleep 3
+              "[$timestamp] METHOD2: ProcDump memory dump technique" | Out-File "$reconDir\lsass_dump.log" -Append
+              
+              Write-Host "[SIMULATION] Method 3: Mimikatz-style extraction..." -ForegroundColor Red
+              Start-Sleep 4
+              "[$timestamp] METHOD3: Mimikatz-style credential extraction" | Out-File "$reconDir\lsass_dump.log" -Append
+              
+              # Simulate extracted credentials with various formats
+              $extractedCredentials = @(
+                  "NTLM: COMPANY\administrator:500:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c:::",
+                  "NTLM: COMPANY\service_sql:1001:aad3b435b51404eeaad3b435b51404ee:7745f7eaee8fb117ad06bdd830b7586c:::",
+                  "KERBEROS: COMPANY\backup_admin -> TGT available",
+                  "PLAINTEXT: COMPANY\helpdesk:Password123!",
+                  "NTLM: WORKSTATION01\localadmin:1002:aad3b435b51404eeaad3b435b51404ee:9966f7eaee8fb117ad06bdd830b7586c:::"
+              )
+              
+              foreach ($cred in $extractedCredentials) {
+                  "[$timestamp] EXTRACTED: $cred" | Out-File "$reconDir\lsass_dump.log" -Append
+                  Start-Sleep 1
+              }
+              
+              Write-Host "[SUCCESS] LSASS credential extraction completed - $($extractedCredentials.Count) credentials obtained" -ForegroundColor Green
+          } else {
+              Write-Host "[ERROR] LSASS process not accessible" -ForegroundColor Red
+              "[$timestamp] ERROR: LSASS process not found or accessible" | Out-File "$reconDir\lsass_dump.log" -Append
+          }
+        cleanup: |
+          Remove-Item "C:\temp\post_breach_sim\lsass_dump.log" -ErrorAction SilentlyContinue
+
+- id: pb.009.sam_dump
+  name: "SAM Database Credential Extraction"
+  description: "T1003.002 - Security Account Manager database dumping"
+  tactic: credential-access
+  technique:
+    attack_id: T1003.002
+    name: "OS Credential Dumping: Security Account Manager"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 3b: SAM Database Dumping
+          Write-Host "[POST-BREACH] Attempting SAM database extraction..." -ForegroundColor Red
+          Write-Host "[MITRE] T1003.002 - OS Credential Dumping: Security Account Manager" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[CRED-ACCESS] Extracting SAM database hashes..." -ForegroundColor Red
+          "[$timestamp] SAM: Starting SAM database extraction" | Out-File "$reconDir\sam_dump.log"
+          
+          # Simulate SAM file access
+          $samPath = "C:\Windows\System32\config\SAM"
+          $systemPath = "C:\Windows\System32\config\SYSTEM"
+          
+          "[$timestamp] SAM: Checking SAM file access at $samPath" | Out-File "$reconDir\sam_dump.log" -Append
+          "[$timestamp] SYSTEM: Checking SYSTEM hive at $systemPath" | Out-File "$reconDir\sam_dump.log" -Append
+          
+          Write-Host "[SIMULATION] Extracting local account hashes..." -ForegroundColor Red
+          Start-Sleep 3
+          
+          # Simulate extracted SAM hashes
+          $samHashes = @(
+              "Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::",
+              "Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::",
+              "localadmin:1001:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c:::",
+              "backup_user:1002:aad3b435b51404eeaad3b435b51404ee:7745f7eaee8fb117ad06bdd830b7586c:::",
+              "service_local:1003:aad3b435b51404eeaad3b435b51404ee:9966f7eaee8fb117ad06bdd830b7586c:::"
+          )
+          
+          foreach ($hash in $samHashes) {
+              "[$timestamp] SAM_HASH: $hash" | Out-File "$reconDir\sam_dump.log" -Append
+          }
+          
+          Write-Host "[SUCCESS] SAM database extraction completed - $($samHashes.Count) hashes extracted" -ForegroundColor Green
+
+- id: pb.010.browser_creds
+  name: "Advanced Browser Credential Harvesting"
+  description: "T1555.003 - Comprehensive browser credential extraction"
+  tactic: credential-access
+  technique:
+    attack_id: T1555.003
+    name: "Credentials from Password Stores: Credentials from Web Browsers"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 3c: Advanced Browser Credential Harvesting
+          Write-Host "[POST-BREACH] Harvesting browser stored credentials..." -ForegroundColor Red
+          Write-Host "[MITRE] T1555.003 - Credentials from Password Stores: Web Browsers" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[CRED-ACCESS] Extracting browser credential stores..." -ForegroundColor Red
+          "[$timestamp] BROWSER: Starting comprehensive browser credential harvest" | Out-File "$reconDir\browser_harvest.log"
+          
+          # Multiple browser credential stores
+          $browserStores = @{
+              "Chrome" = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Login Data"
+              "Edge" = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Login Data"
+              "Firefox" = "$env:APPDATA\Mozilla\Firefox\Profiles\*\logins.json"
+              "Opera" = "$env:APPDATA\Opera Software\Opera Stable\Login Data"
+          }
+          
+          foreach ($browser in $browserStores.Keys) {
+              $path = $browserStores[$browser]
+              "[$timestamp] BROWSER: Checking $browser credential store at $path" | Out-File "$reconDir\browser_harvest.log" -Append
+              
+              # Simulate credential extraction per browser
+              Write-Host "[SIMULATION] Extracting $browser credentials..." -ForegroundColor Red
+              Start-Sleep 2
+              
+              # Simulate found credentials
+              $browserCreds = @(
+                  "$browser -> https://portal.office.com -> admin@company.com:OfficeP@ss123",
+                  "$browser -> https://aws.amazon.com -> devops@company.com:AWSKey456", 
+                  "$browser -> https://github.com -> developer@company.com:GitToken789",
+                  "$browser -> https://portal.azure.com -> cloudadmin@company.com:AzureP@ss321"
+              )
+              
+              foreach ($cred in $browserCreds) {
+                  "[$timestamp] EXTRACTED: $cred" | Out-File "$reconDir\browser_harvest.log" -Append
+              }
+          }
+          
+          Write-Host "[SUCCESS] Browser credential harvesting completed - Multiple browsers processed" -ForegroundColor Green
+
+- id: pb.011.credential_files
+  name: "Credential Hunting in Files"
+  description: "T1552.001 - Search for credentials in configuration files"
+  tactic: credential-access
+  technique:
+    attack_id: T1552.001
+    name: "Unsecured Credentials: Credentials in Files"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 3d: Credential File Hunting
+          Write-Host "[POST-BREACH] Hunting for credentials in files..." -ForegroundColor Red
+          Write-Host "[MITRE] T1552.001 - Unsecured Credentials: Credentials in Files" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[CRED-ACCESS] Searching for credential files..." -ForegroundColor Red
+          "[$timestamp] FILE_HUNT: Starting credential file hunting" | Out-File "$reconDir\credential_hunt.log"
+          
+          # Common credential file patterns
+          $credentialPatterns = @(
+              "*password*", "*config*", "*secret*", "*key*", "*credential*",
+              "*.xml", "*.txt", "*.ini", "*.conf", "*.properties"
+          )
+          
+          $searchPaths = @(
+              "C:\inetpub\wwwroot",
+              "C:\Program Files*\*\config",
+              "$env:USERPROFILE\Documents",
+              "$env:APPDATA",
+              "C:\Users\*\Desktop"
+          )
+          
+          foreach ($searchPath in $searchPaths) {
+              "[$timestamp] SEARCHING: $searchPath" | Out-File "$reconDir\credential_hunt.log" -Append
+              
+              foreach ($pattern in $credentialPatterns) {
+                  # Simulate file search
+                  if ($searchPath -like "*Program Files*") {
+                      # Simulate found config files
+                      $foundFiles = @(
+                          "C:\Program Files\AppName\config\database.xml",
+                          "C:\Program Files\WebApp\web.config",
+                          "C:\Program Files\Service\app.properties"
+                      )
+                  } else {
+                      # Simulate found user files
+                      $foundFiles = @(
+                          "$env:USERPROFILE\Documents\passwords.txt",
+                          "$env:USERPROFILE\Desktop\server_credentials.txt"
+                      )
+                  }
+                  
+                  foreach ($file in $foundFiles) {
+                      "[$timestamp] FOUND_FILE: $file" | Out-File "$reconDir\credential_hunt.log" -Append
+                  }
+              }
+          }
+          
+          # Simulate extracted credentials from files
+          $fileCredentials = @(
+              "database.xml -> SQL_USER=sa, SQL_PASS=SqlP@ssw0rd123",
+              "web.config -> API_KEY=sk_live_abc123def456ghi789",
+              "passwords.txt -> FTP_SERVER: ftp.company.com admin:ftpP@ss789",
+              "server_credentials.txt -> SSH_KEY=/path/to/key, USER=root"
+          )
+          
+          Write-Host "[SIMULATION] Extracting credentials from files..." -ForegroundColor Red
+          Start-Sleep 3
+          
+          foreach ($cred in $fileCredentials) {
+              "[$timestamp] EXTRACTED_FROM_FILE: $cred" | Out-File "$reconDir\credential_hunt.log" -Append
+          }
+          
+          Write-Host "[SUCCESS] Credential file hunting completed - $($fileCredentials.Count) credential sets found" -ForegroundColor Green
+
+# ===============================
+# PHASE 4: PRIVILEGE ESCALATION
+# ===============================
+
+- id: pb.012.privilege_escalation
+  name: "Advanced Privilege Escalation"
+  description: "T1068 - Exploit vulnerabilities for privilege escalation"
+  tactic: privilege-escalation
+  technique:
+    attack_id: T1068
+    name: "Exploitation for Privilege Escalation"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 4: Advanced Privilege Escalation
+          Write-Host "[POST-BREACH] Attempting privilege escalation..." -ForegroundColor Red
+          Write-Host "[MITRE] T1068 - Exploitation for Privilege Escalation" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[PRIVESC] Initiating privilege escalation techniques..." -ForegroundColor Red
+          "[$timestamp] PRIVESC: Starting privilege escalation attempts" | Out-File "$reconDir\privilege_escalation.log"
+          
+          # Check current privileges
+          $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+          $principal = New-Object System.Security.Principal.WindowsPrincipal($currentUser)
+          $isAdmin = $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+          
+          "[$timestamp] CURRENT_USER: $($currentUser.Name)" | Out-File "$reconDir\privilege_escalation.log" -Append
+          "[$timestamp] IS_ADMIN: $isAdmin" | Out-File "$reconDir\privilege_escalation.log" -Append
+          
+          if (-not $isAdmin) {
+              Write-Host "[PRIVESC] Current user is not admin - attempting escalation..." -ForegroundColor Red
+              
+              # Method 1: UAC Bypass simulation
+              Write-Host "[SIMULATION] UAC Bypass technique..." -ForegroundColor Red
+              Start-Sleep 2
+              "[$timestamp] UAC_BYPASS: Attempting UAC bypass via eventvwr.exe" | Out-File "$reconDir\privilege_escalation.log" -Append
+              
+              # Method 2: Token manipulation
+              Write-Host "[SIMULATION] Token manipulation..." -ForegroundColor Red
+              Start-Sleep 3
+              "[$timestamp] TOKEN_MANIP: Attempting token elevation" | Out-File "$reconDir\privilege_escalation.log" -Append
+              
+              # Method 3: Service exploitation
+              Write-Host "[SIMULATION] Service privilege escalation..." -ForegroundColor Red
+              Start-Sleep 2
+              "[$timestamp] SERVICE_EXPLOIT: Checking unquoted service paths" | Out-File "$reconDir\privilege_escalation.log" -Append
+              
+              # Simulate successful escalation
+              "[$timestamp] SUCCESS: Administrative privileges obtained" | Out-File "$reconDir\privilege_escalation.log" -Append
+              Write-Host "[SUCCESS] Privilege escalation completed - Administrative access gained" -ForegroundColor Green
+          } else {
+              Write-Host "[INFO] Already running with administrative privileges" -ForegroundColor Yellow
+              "[$timestamp] ALREADY_ADMIN: Current session already has administrative privileges" | Out-File "$reconDir\privilege_escalation.log" -Append
+          }
+
+- id: pb.013.token_manipulation  
+  name: "Token Manipulation and Impersonation"
+  description: "T1134.001 - Advanced token manipulation for privilege escalation"
+  tactic: privilege-escalation
+  technique:
+    attack_id: T1134.001
+    name: "Access Token Manipulation: Token Impersonation/Theft"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 4b: Token Manipulation
+          Write-Host "[POST-BREACH] Performing token manipulation and impersonation..." -ForegroundColor Red
+          Write-Host "[MITRE] T1134.001 - Access Token Manipulation: Token Impersonation/Theft" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[PRIVESC] Initiating token manipulation..." -ForegroundColor Red
+          "[$timestamp] TOKEN: Starting token manipulation techniques" | Out-File "$reconDir\token_manipulation.log"
+          
+          # Enumerate available tokens
+          Write-Host "[SIMULATION] Enumerating available tokens..." -ForegroundColor Red
+          Start-Sleep 2
+          
+          $availableTokens = @(
+              "NT AUTHORITY\SYSTEM - SeDebugPrivilege",
+              "COMPANY\administrator - SeBackupPrivilege", 
+              "NT AUTHORITY\LOCAL SERVICE - SeChangeNotifyPrivilege",
+              "COMPANY\service_sql - SeServiceLogonRight"
+          )
+          
+          foreach ($token in $availableTokens) {
+              "[$timestamp] AVAILABLE_TOKEN: $token" | Out-File "$reconDir\token_manipulation.log" -Append
+          }
+          
+          # Token impersonation simulation
+          Write-Host "[SIMULATION] Attempting token impersonation..." -ForegroundColor Red
+          Start-Sleep 3
+          
+          "[$timestamp] IMPERSONATION: Stealing SYSTEM token from lsass.exe" | Out-File "$reconDir\token_manipulation.log" -Append
+          "[$timestamp] SUCCESS: Token impersonation successful - SYSTEM context obtained" | Out-File "$reconDir\token_manipulation.log" -Append
+          
+          # Token privileges escalation
+          Write-Host "[SIMULATION] Escalating token privileges..." -ForegroundColor Red
+          Start-Sleep 2
+          
+          $escalatedPrivileges = @(
+              "SeDebugPrivilege - Enabled",
+              "SeBackupPrivilege - Enabled",
+              "SeRestorePrivilege - Enabled", 
+              "SeTakeOwnershipPrivilege - Enabled",
+              "SeLoadDriverPrivilege - Enabled"
+          )
+          
+          foreach ($privilege in $escalatedPrivileges) {
+              "[$timestamp] PRIVILEGE_ESCALATED: $privilege" | Out-File "$reconDir\token_manipulation.log" -Append
+          }
+          
+          Write-Host "[SUCCESS] Token manipulation completed - SYSTEM privileges obtained" -ForegroundColor Green
+
+# ===========================
+# PHASE 5: LATERAL MOVEMENT
+# ===========================
+
+- id: pb.014.rdp_lateral
+  name: "RDP Lateral Movement"
+  description: "T1021.001 - Remote Desktop Protocol lateral movement"
+  tactic: lateral-movement
+  technique:
+    attack_id: T1021.001
+    name: "Remote Services: Remote Desktop Protocol"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 5: RDP Lateral Movement
+          Write-Host "[POST-BREACH] Initiating RDP lateral movement..." -ForegroundColor Red
+          Write-Host "[MITRE] T1021.001 - Remote Services: Remote Desktop Protocol" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[LATERAL] Attempting RDP connections to identified hosts..." -ForegroundColor Red
+          "[$timestamp] RDP: Starting RDP lateral movement" | Out-File "$reconDir\rdp_lateral.log"
+          
+          # Target hosts from previous reconnaissance
+          $targetHosts = @(
+              @{Host="192.168.1.10"; Name="DC01.company.local"; Type="Domain Controller"},
+              @{Host="192.168.1.20"; Name="FS01.company.local"; Type="File Server"},
+              @{Host="192.168.1.30"; Name="SQL01.company.local"; Type="Database Server"},
+              @{Host="192.168.1.40"; Name="WS01.company.local"; Type="Workstation"}
+          )
+          
+          # Credential sets from previous dumping
+          $credentials = @(
+              @{User="COMPANY\administrator"; Pass="AdminP@ss123"},
+              @{User="COMPANY\service_sql"; Pass="SqlService456"},
+              @{User="localadmin"; Pass="Local123!"}
+          )
+          
+          foreach ($target in $targetHosts) {
+              "[$timestamp] TARGET: Attempting RDP to $($target.Host) ($($target.Name))" | Out-File "$reconDir\rdp_lateral.log" -Append
+              
+              foreach ($cred in $credentials) {
+                  Write-Host "[SIMULATION] RDP attempt: $($target.Host) with $($cred.User)" -ForegroundColor Red
+                  Start-Sleep 2
+                  
+                  # Simulate RDP connection attempt
+                  if ($target.Type -eq "Domain Controller" -and $cred.User -like "*administrator*") {
+                      "[$timestamp] SUCCESS: RDP connection to $($target.Host) with $($cred.User)" | Out-File "$reconDir\rdp_lateral.log" -Append
+                      "[$timestamp] COMPROMISE: $($target.Name) successfully compromised via RDP" | Out-File "$reconDir\rdp_lateral.log" -Append
+                      Write-Host "[SUCCESS] RDP lateral movement to $($target.Name) successful" -ForegroundColor Green
+                  } elseif ($target.Type -eq "File Server") {
+                      "[$timestamp] SUCCESS: RDP connection to $($target.Host) with $($cred.User)" | Out-File "$reconDir\rdp_lateral.log" -Append
+                      "[$timestamp] COMPROMISE: $($target.Name) successfully compromised via RDP" | Out-File "$reconDir\rdp_lateral.log" -Append
+                      Write-Host "[SUCCESS] RDP lateral movement to $($target.Name) successful" -ForegroundColor Green
+                  } else {
+                      "[$timestamp] FAILED: RDP connection to $($target.Host) with $($cred.User) failed" | Out-File "$reconDir\rdp_lateral.log" -Append
+                  }
+              }
+          }
+
+- id: pb.015.smb_lateral
+  name: "SMB/PsExec Lateral Movement"
+  description: "T1021.002 - SMB/Admin Shares lateral movement"
+  tactic: lateral-movement
+  technique:
+    attack_id: T1021.002
+    name: "Remote Services: SMB/Windows Admin Shares"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 5b: SMB Lateral Movement
+          Write-Host "[POST-BREACH] Performing SMB lateral movement..." -ForegroundColor Red
+          Write-Host "[MITRE] T1021.002 - Remote Services: SMB/Windows Admin Shares" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[LATERAL] Accessing admin shares and executing commands..." -ForegroundColor Red
+          "[$timestamp] SMB: Starting SMB lateral movement" | Out-File "$reconDir\smb_lateral.log"
+          
+          # Target systems for SMB movement
+          $smbTargets = @(
+              "192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40"
+          )
+          
+          foreach ($target in $smbTargets) {
+              "[$timestamp] SMB_TARGET: Attempting connection to \\$target\admin$" | Out-File "$reconDir\smb_lateral.log" -Append
+              
+              Write-Host "[SIMULATION] SMB connection to $target..." -ForegroundColor Red
+              Start-Sleep 2
+              
+              # Simulate admin share access
+              "[$timestamp] SUCCESS: Connected to \\$target\admin$" | Out-File "$reconDir\smb_lateral.log" -Append
+              
+              # Simulate file copy and execution
+              Write-Host "[SIMULATION] Copying payload and executing via PsExec..." -ForegroundColor Red
+              Start-Sleep 3
+              
+              "[$timestamp] PAYLOAD_COPY: Copying implant.exe to \\$target\admin$\temp\" | Out-File "$reconDir\smb_lateral.log" -Append
+              "[$timestamp] PSEXEC: Executing remote command on $target" | Out-File "$reconDir\smb_lateral.log" -Append
+              "[$timestamp] SUCCESS: Remote execution successful on $target" | Out-File "$reconDir\smb_lateral.log" -Append
+              
+              # Simulate persistence establishment
+              "[$timestamp] PERSISTENCE: Installing service on $target for persistence" | Out-File "$reconDir\smb_lateral.log" -Append
+          }
+          
+          Write-Host "[SUCCESS] SMB lateral movement completed - $($smbTargets.Count) hosts compromised" -ForegroundColor Green
+
+- id: pb.016.pass_the_hash
+  name: "Pass-the-Hash Attack"
+  description: "T1550.002 - Use NTLM hashes for authentication"
+  tactic: lateral-movement  
+  technique:
+    attack_id: T1550.002
+    name: "Use Alternate Authentication Material: Pass the Hash"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 5c: Pass-the-Hash Attack
+          Write-Host "[POST-BREACH] Executing Pass-the-Hash attacks..." -ForegroundColor Red
+          Write-Host "[MITRE] T1550.002 - Use Alternate Authentication Material: Pass the Hash" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[LATERAL] Using extracted NTLM hashes for authentication..." -ForegroundColor Red
+          "[$timestamp] PTH: Starting Pass-the-Hash attacks" | Out-File "$reconDir\pass_the_hash.log"
+          
+          # Previously extracted NTLM hashes
+          $ntlmHashes = @(
+              @{User="COMPANY\administrator"; Hash="8846f7eaee8fb117ad06bdd830b7586c"; Target="DC01"},
+              @{User="COMPANY\service_sql"; Hash="7745f7eaee8fb117ad06bdd830b7586c"; Target="SQL01"},
+              @{User="COMPANY\backup_admin"; Hash="9966f7eaee8fb117ad06bdd830b7586c"; Target="FS01"}
+          )
+          
+          $targetSystems = @("192.168.1.10", "192.168.1.20", "192.168.1.30")
+          
+          foreach ($hashCred in $ntlmHashes) {
+              foreach ($target in $targetSystems) {
+                  "[$timestamp] PTH_ATTEMPT: Using $($hashCred.User) hash against $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                  
+                  Write-Host "[SIMULATION] Pass-the-Hash: $($hashCred.User) -> $target" -ForegroundColor Red
+                  Start-Sleep 2
+                  
+                  # Simulate hash authentication
+                  if (($hashCred.User -like "*administrator*" -and $target -eq "192.168.1.10") -or
+                      ($hashCred.User -like "*service_sql*" -and $target -eq "192.168.1.30") -or
+                      ($hashCred.User -like "*backup_admin*" -and $target -eq "192.168.1.20")) {
+                      
+                      "[$timestamp] SUCCESS: Hash authentication successful for $($hashCred.User) on $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                      "[$timestamp] ACCESS: Administrative access gained on $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                      
+                      # Simulate post-exploitation activities
+                      "[$timestamp] POST_EXPLOIT: Executing commands on $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                      "[$timestamp] POST_EXPLOIT: Dumping additional credentials on $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                      
+                      Write-Host "[SUCCESS] Pass-the-Hash successful: $($hashCred.User) on $target" -ForegroundColor Green
+                  } else {
+                      "[$timestamp] FAILED: Hash authentication failed for $($hashCred.User) on $target" | Out-File "$reconDir\pass_the_hash.log" -Append
+                  }
+              }
+          }
+
+- id: pb.017.wmi_execution
+  name: "WMI Remote Code Execution"
+  description: "T1047 - Windows Management Instrumentation for lateral movement"
+  tactic: lateral-movement
+  technique:
+    attack_id: T1047
+    name: "Windows Management Instrumentation"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 5d: WMI Remote Execution
+          Write-Host "[POST-BREACH] Executing WMI remote commands..." -ForegroundColor Red
+          Write-Host "[MITRE] T1047 - Windows Management Instrumentation" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[LATERAL] Using WMI for remote command execution..." -ForegroundColor Red
+          "[$timestamp] WMI: Starting WMI remote execution" | Out-File "$reconDir\wmi_execution.log"
+          
+          # Target systems for WMI execution
+          $wmiTargets = @(
+              @{Host="192.168.1.10"; Name="DC01.company.local"},
+              @{Host="192.168.1.20"; Name="FS01.company.local"},
+              @{Host="192.168.1.30"; Name="SQL01.company.local"}
+          )
+          
+          # WMI commands to execute
+          $wmiCommands = @(
+              "whoami /all",
+              "net user /domain",
+              "tasklist",
+              "ipconfig /all",
+              "net share"
+          )
+          
+          foreach ($target in $wmiTargets) {
+              "[$timestamp] WMI_TARGET: Connecting to $($target.Host) ($($target.Name))" | Out-File "$reconDir\wmi_execution.log" -Append
+              
+              Write-Host "[SIMULATION] WMI connection to $($target.Name)..." -ForegroundColor Red
+              Start-Sleep 2
+              
+              # Simulate WMI connection success
+              "[$timestamp] SUCCESS: WMI connection established to $($target.Host)" | Out-File "$reconDir\wmi_execution.log" -Append
+              
+              foreach ($command in $wmiCommands) {
+                  Write-Host "[SIMULATION] WMI executing: $command on $($target.Name)" -ForegroundColor Red
+                  Start-Sleep 1
+                  
+                  "[$timestamp] WMI_EXEC: $command on $($target.Host)" | Out-File "$reconDir\wmi_execution.log" -Append
+                  
+                  # Simulate command output
+                  switch ($command) {
+                      "whoami /all" { 
+                          "[$timestamp] OUTPUT: COMPANY\administrator (Admin privileges)" | Out-File "$reconDir\wmi_execution.log" -Append
+                      }
+                      "net user /domain" {
+                          "[$timestamp] OUTPUT: Domain users enumerated (50+ accounts)" | Out-File "$reconDir\wmi_execution.log" -Append
+                      }
+                      "tasklist" {
+                          "[$timestamp] OUTPUT: Running processes enumerated (80+ processes)" | Out-File "$reconDir\wmi_execution.log" -Append
+                      }
+                      "ipconfig /all" {
+                          "[$timestamp] OUTPUT: Network configuration obtained" | Out-File "$reconDir\wmi_execution.log" -Append
+                      }
+                      "net share" {
+                          "[$timestamp] OUTPUT: Network shares discovered" | Out-File "$reconDir\wmi_execution.log" -Append
+                      }
+                  }
+              }
+              
+              # Establish persistence via WMI
+              Write-Host "[SIMULATION] Installing WMI persistence on $($target.Name)..." -ForegroundColor Red
+              Start-Sleep 3
+              "[$timestamp] PERSISTENCE: WMI event subscription created on $($target.Host)" | Out-File "$reconDir\wmi_execution.log" -Append
+          }
+          
+          Write-Host "[SUCCESS] WMI remote execution completed on all targets" -ForegroundColor Green
+
+# ========================
+# PHASE 6: DATA COLLECTION & EXFILTRATION
+# ========================
+
+- id: pb.018.local_data_collection
+  name: "Local Data Collection and Staging"
+  description: "T1005 - Collect sensitive data from local system"
+  tactic: collection
+  technique:
+    attack_id: T1005
+    name: "Data from Local System"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 6: Local Data Collection
+          Write-Host "[POST-BREACH] Collecting sensitive data from local system..." -ForegroundColor Red
+          Write-Host "[MITRE] T1005 - Data from Local System" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[COLLECTION] Searching for and staging sensitive data..." -ForegroundColor Red
+          "[$timestamp] COLLECTION: Starting local data collection" | Out-File "$reconDir\data_collection.log"
+          
+          # Create staging directory
+          $stagingDir = "C:\temp\staged_data"
+          New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+          "[$timestamp] STAGING: Created staging directory at $stagingDir" | Out-File "$reconDir\data_collection.log" -Append
+          
+          # Data collection targets
+          $dataTargets = @(
+              @{Type="Financial"; Pattern="*financial*,*budget*,*payroll*"; Extensions="*.xlsx,*.pdf,*.doc"},
+              @{Type="Credentials"; Pattern="*password*,*credential*,*key*"; Extensions="*.txt,*.xml,*.config"},
+              @{Type="Business"; Pattern="*contract*,*proposal*,*confidential*"; Extensions="*.docx,*.pdf,*.pptx"},
+              @{Type="Technical"; Pattern="*database*,*backup*,*config*"; Extensions="*.sql,*.bak,*.conf"},
+              @{Type="Personal"; Pattern="*SSN*,*personal*,*employee*"; Extensions="*.xlsx,*.csv,*.doc"}
+          )
+          
+          foreach ($target in $dataTargets) {
+              Write-Host "[SIMULATION] Collecting $($target.Type) data..." -ForegroundColor Red
+              Start-Sleep 2
+              
+              "[$timestamp] COLLECTING: $($target.Type) data with patterns $($target.Pattern)" | Out-File "$reconDir\data_collection.log" -Append
+              
+              # Simulate found files
+              $foundFiles = @(
+                  "$($target.Type)_report_2024.xlsx",
+                  "$($target.Type)_backup_jan2024.zip", 
+                  "$($target.Type)_analysis_Q1.pdf"
+              )
+              
+              foreach ($file in $foundFiles) {
+                  $fileSize = Get-Random -Minimum 500 -Maximum 5000
+                  "[$timestamp] FOUND: $file ($fileSize KB)" | Out-File "$reconDir\data_collection.log" -Append
+                  "[$timestamp] STAGED: Copied $file to staging directory" | Out-File "$reconDir\data_collection.log" -Append
+              }
+          }
+          
+          # Calculate total collected data
+          $totalFiles = $dataTargets.Count * 3
+          $totalSize = Get-Random -Minimum 50 -Maximum 200
+          "[$timestamp] SUMMARY: Collected $totalFiles files totaling $totalSize MB" | Out-File "$reconDir\data_collection.log" -Append
+          
+          Write-Host "[SUCCESS] Local data collection completed - $totalFiles files ($totalSize MB) staged" -ForegroundColor Green
+
+- id: pb.019.network_data_collection
+  name: "Network Share Data Collection"
+  description: "T1039 - Collect data from network shared drives"
+  tactic: collection
+  technique:
+    attack_id: T1039
+    name: "Data from Network Shared Drive"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 6b: Network Data Collection
+          Write-Host "[POST-BREACH] Collecting data from network shares..." -ForegroundColor Red
+          Write-Host "[MITRE] T1039 - Data from Network Shared Drive" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[COLLECTION] Accessing network shares for data collection..." -ForegroundColor Red
+          "[$timestamp] NETWORK_COLLECTION: Starting network share data collection" | Out-File "$reconDir\network_collection.log"
+          
+          # Network shares discovered during reconnaissance
+          $networkShares = @(
+              @{Server="FS01"; Share="\\192.168.1.20\SharedDocs"; Type="Documents"},
+              @{Server="FS01"; Share="\\192.168.1.20\UserProfiles"; Type="User Data"},
+              @{Server="SQL01"; Share="\\192.168.1.30\Backups"; Type="Database Backups"},
+              @{Server="DC01"; Share="\\192.168.1.10\SYSVOL"; Type="Group Policy"},
+              @{Server="FS01"; Share="\\192.168.1.20\Finance"; Type="Financial Data"}
+          )
+          
+          foreach ($share in $networkShares) {
+              "[$timestamp] ACCESSING: $($share.Share) ($($share.Type))" | Out-File "$reconDir\network_collection.log" -Append
+              
+              Write-Host "[SIMULATION] Accessing $($share.Share)..." -ForegroundColor Red
+              Start-Sleep 2
+              
+              # Simulate successful share access
+              "[$timestamp] SUCCESS: Connected to $($share.Share)" | Out-File "$reconDir\network_collection.log" -Append
+              
+              # Simulate file enumeration and collection
+              $shareFiles = @(
+                  "$($share.Type)_file1.xlsx",
+                  "$($share.Type)_file2.pdf",
+                  "$($share.Type)_archive.zip"
+              )
+              
+              foreach ($file in $shareFiles) {
+                  $fileSize = Get-Random -Minimum 1000 -Maximum 10000
+                  "[$timestamp] FOUND: $($share.Share)\$file ($fileSize KB)" | Out-File "$reconDir\network_collection.log" -Append
+                  
+                  Write-Host "[SIMULATION] Downloading $file..." -ForegroundColor Red
+                  Start-Sleep 1
+                  
+                  "[$timestamp] DOWNLOADED: $file to local staging area" | Out-File "$reconDir\network_collection.log" -Append
+              }
+              
+              # Special handling for high-value shares
+              if ($share.Type -eq "Financial Data") {
+                  Write-Host "[HIGH-VALUE] Financial data discovered - priority collection" -ForegroundColor Yellow
+                  "[$timestamp] HIGH_VALUE: Priority collection from $($share.Share)" | Out-File "$reconDir\network_collection.log" -Append
+              }
+          }
+          
+          $totalShares = $networkShares.Count
+          $totalNetworkFiles = $totalShares * 3
+          $totalNetworkSize = Get-Random -Minimum 100 -Maximum 500
+          
+          "[$timestamp] NETWORK_SUMMARY: Accessed $totalShares shares, collected $totalNetworkFiles files ($totalNetworkSize MB)" | Out-File "$reconDir\network_collection.log" -Append
+          Write-Host "[SUCCESS] Network data collection completed - $totalNetworkFiles files ($totalNetworkSize MB)" -ForegroundColor Green
+
+- id: pb.020.c2_exfiltration
+  name: "Command and Control Exfiltration"
+  description: "T1041 - Exfiltrate data via command and control channel"
+  tactic: exfiltration
+  technique:
+    attack_id: T1041
+    name: "Exfiltration Over C2 Channel"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 6c: C2 Channel Exfiltration
+          Write-Host "[POST-BREACH] Exfiltrating data via C2 channel..." -ForegroundColor Red
+          Write-Host "[MITRE] T1041 - Exfiltration Over C2 Channel" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[EXFILTRATION] Establishing C2 connection for data exfiltration..." -ForegroundColor Red
+          "[$timestamp] C2_EXFIL: Starting C2 channel exfiltration" | Out-File "$reconDir\c2_exfiltration.log"
+          
+          # Simulate C2 server connection
+          $c2Server = "evil-c2-server.attacker.com"
+          $c2Port = "443"
+          
+          "[$timestamp] C2_CONNECT: Establishing connection to $c2Server:$c2Port" | Out-File "$reconDir\c2_exfiltration.log" -Append
+          
+          Write-Host "[SIMULATION] Connecting to C2 server..." -ForegroundColor Red
+          Start-Sleep 3
+          
+          "[$timestamp] SUCCESS: C2 connection established" | Out-File "$reconDir\c2_exfiltration.log" -Append
+          
+          # Simulate data preparation for exfiltration
+          Write-Host "[SIMULATION] Preparing data for exfiltration..." -ForegroundColor Red
+          Start-Sleep 2
+          
+          $exfilData = @(
+              @{Name="credential_dump.txt"; Size="2.3"; Type="Credentials"},
+              @{Name="financial_reports.zip"; Size="45.7"; Type="Financial"},
+              @{Name="employee_data.xlsx"; Size="12.1"; Type="Personal"},
+              @{Name="network_config.txt"; Size="0.8"; Type="Technical"},
+              @{Name="database_backup.sql"; Size="128.5"; Type="Database"}
+          )
+          
+          # Exfiltrate each data package
+          foreach ($data in $exfilData) {
+              "[$timestamp] EXFILTRATING: $($data.Name) ($($data.Size) MB) - $($data.Type)" | Out-File "$reconDir\c2_exfiltration.log" -Append
+              
+              Write-Host "[SIMULATION] Exfiltrating $($data.Name)..." -ForegroundColor Red
+              
+              # Simulate transfer time based on file size
+              $transferTime = [math]::Ceiling([double]$data.Size / 10)
+              Start-Sleep $transferTime
+              
+              "[$timestamp] SUCCESS: $($data.Name) exfiltrated successfully" | Out-File "$reconDir\c2_exfiltration.log" -Append
+          }
+          
+          # Calculate total exfiltrated data
+          $totalSize = ($exfilData | Measure-Object -Property Size -Sum).Sum
+          $totalFiles = $exfilData.Count
+          
+          "[$timestamp] EXFIL_COMPLETE: $totalFiles files totaling $totalSize MB exfiltrated via C2" | Out-File "$reconDir\c2_exfiltration.log" -Append
+          Write-Host "[SUCCESS] C2 exfiltration completed - $totalFiles files ($totalSize MB) exfiltrated" -ForegroundColor Green
+
+- id: pb.021.alternative_exfiltration
+  name: "Alternative Exfiltration Methods"
+  description: "T1048.003 - Exfiltration over alternative protocols"
+  tactic: exfiltration
+  technique:
+    attack_id: T1048.003
+    name: "Exfiltration Over Alternative Protocol"
+  platforms:
+    windows:
+      psh:
+        command: |
+          # Phase 6d: Alternative Exfiltration
+          Write-Host "[POST-BREACH] Using alternative exfiltration methods..." -ForegroundColor Red
+          Write-Host "[MITRE] T1048.003 - Exfiltration Over Alternative Protocol" -ForegroundColor Yellow
+          
+          $reconDir = "C:\temp\post_breach_sim"
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+          
+          Write-Host "[EXFILTRATION] Implementing covert exfiltration channels..." -ForegroundColor Red
+          "[$timestamp] ALT_EXFIL: Starting alternative exfiltration methods" | Out-File "$reconDir\alt_exfiltration.log"
+          
+          # Method 1: DNS Exfiltration
+          Write-Host "[SIMULATION] DNS tunnel exfiltration..." -ForegroundColor Red
+          Start-Sleep 3
+          
+          "[$timestamp] DNS_EXFIL: Establishing DNS tunnel to attacker-dns.com" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] DNS_EXFIL: Encoding data in DNS queries" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] SUCCESS: 5.2 MB exfiltrated via DNS tunnel" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          
+          # Method 2: Email Exfiltration
+          Write-Host "[SIMULATION] Email-based exfiltration..." -ForegroundColor Red
+          Start-Sleep 2
+          
+          "[$timestamp] EMAIL_EXFIL: Sending data via compromised email account" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] EMAIL_EXFIL: Attachments sent to external email addresses" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] SUCCESS: 23.7 MB exfiltrated via email" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          
+          # Method 3: Cloud Storage Exfiltration
+          Write-Host "[SIMULATION] Cloud storage exfiltration..." -ForegroundColor Red
+          Start-Sleep 4
+          
+          "[$timestamp] CLOUD_EXFIL: Uploading to compromised cloud storage accounts" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] CLOUD_EXFIL: Using personal Dropbox/OneDrive accounts" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] SUCCESS: 67.3 MB exfiltrated via cloud storage" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          
+          # Method 4: USB/Physical Media
+          Write-Host "[SIMULATION] Physical media exfiltration..." -ForegroundColor Red
+          Start-Sleep 2
+          
+          "[$timestamp] PHYSICAL_EXFIL: Copying data to removable media" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] PHYSICAL_EXFIL: USB device preparation complete" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          "[$timestamp] SUCCESS: 156.8 MB staged for physical exfiltration" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          
+          # Summary of all exfiltration methods
+          $totalExfiltrated = 5.2 + 23.7 + 67.3 + 156.8
+          "[$timestamp] TOTAL_EXFILTRATED: $totalExfiltrated MB across all methods" | Out-File "$reconDir\alt_exfiltration.log" -Append
+          
+          Write-Host "[SUCCESS] Alternative exfiltration completed - $totalExfiltrated MB total" -ForegroundColor Green
+          Write-Host "[MISSION COMPLETE] Post-breach kill chain simulation finished" -ForegroundColor Magenta
+        cleanup: |
+          # Cleanup all simulation artifacts
+          Remove-Item "C:\temp\post_breach_sim" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "C:\temp\staged_data" -Recurse -Force -ErrorAction SilentlyContinue
