@@ -6,7 +6,7 @@
 
 En este workshop mostramos como trabaja un **Purple Team** de manera colaborativa entre ataque y defensa, que herramientas utilizamos y como mediante un War Game podemos anticipar amenazas de manera temprana teniendo una mirada general de todo el proceso desde ambas partes del equipo.
 
-El workhop :point_down:
+Queres volver a verlo? :point_down:
 
 [![Cyber War Game](https://img.youtube.com/vi/X4RUimCogR8/0.jpg)](https://www.youtube.com/watch?v=X4RUimCogR8)
 
